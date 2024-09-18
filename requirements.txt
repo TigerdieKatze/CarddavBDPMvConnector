@@ -1,0 +1,3 @@
+vdirsyncer
+vobject
+schedule
