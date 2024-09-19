@@ -18,7 +18,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy project files
-COPY carddav_sync.py .
+COPY *.py .
 
 # Create necessary directories
 RUN mkdir -p /app/config /app/data
@@ -32,4 +32,4 @@ USER appuser
 EXPOSE 5000
 
 # Run the application
-CMD ["python", "carddav_sync.py"]
+CMD ["python", "main.py"]

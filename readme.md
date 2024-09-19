@@ -51,6 +51,17 @@ CarddavBDPMvConnector is an automated tool designed to synchronize member data b
 
 3. Edit the `config/config.json` file with your actual configuration.
 
+## Project Structure
+
+The project is now structured into multiple modules for better organization:
+
+- `main.py`: The entry point of the application, handling API routes and scheduling.
+- `config.py`: Manages loading and saving of configuration.
+- `models.py`: Contains data models used in the application.
+- `carddav_sync.py`: Handles the core CardDAV synchronization logic.
+- `mv_integration.py`: Manages integration with the MV system.
+- `notifications.py`: Handles email notifications.
+
 ## Usage
 
 1. Start the Docker container:
