@@ -1,54 +1,63 @@
+import os
+import json
+import logging
+import requests
 import vdirsyncer.storage
 import vdirsyncer.exceptions
 import vobject
 from typing import List, Tuple, Dict
-import logging
-import os
-import json
 import schedule
 import time
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from datetime import datetime, timedelta
+from datetime import datetime
+import pandas as pd
 
-# Load configuration from environment variables or config file
+# Load configuration from environment variables
 def load_config():
-    config = {
-        "CARDDAV_URL": os.getenv("CARDDAV_URL", "https://carddav.example.com/addressbooks/user/default/"),
-        "USERNAME": os.getenv("USERNAME", "your_username"),
-        "PASSWORD": os.getenv("PASSWORD", "your_password"),
-        "GROUP_MAPPING": json.loads(os.getenv("GROUP_MAPPING", '{"RR\'s": "Stammesrat"}')),
-        "DEFAULT_GROUP": os.getenv("DEFAULT_GROUP", "gesammter Stamm"),
-        "APPLY_GROUP_MAPPING_TO_PARENTS": os.getenv("APPLY_GROUP_MAPPING_TO_PARENTS", "False").lower() == "true",
-        "APPLY_DEFAULT_GROUP_TO_PARENTS": os.getenv("APPLY_DEFAULT_GROUP_TO_PARENTS", "True").lower() == "true",
-        "RUN_SCHEDULE": os.getenv("RUN_SCHEDULE", "single"),  # "single" or "daily"
-        "NOTIFICATION_EMAIL": os.getenv("NOTIFICATION_EMAIL", "admin@example.com"),
-        "SMTP_SERVER": os.getenv("SMTP_SERVER", "smtp.example.com"),
-        "SMTP_PORT": int(os.getenv("SMTP_PORT", "587")),
-        "SMTP_USERNAME": os.getenv("SMTP_USERNAME", "your_smtp_username"),
-        "SMTP_PASSWORD": os.getenv("SMTP_PASSWORD", "your_smtp_password"),
-        "STATE_FILE": os.getenv("STATE_FILE", "dangling_contacts_state.json")
+    return {
+        "CARDDAV_URL": os.environ["CARDDAV_URL"],
+        "USERNAME": os.environ["USERNAME"],
+        "PASSWORD": os.environ["PASSWORD"],
+        "GROUP_MAPPING": json.loads(os.environ.get("GROUP_MAPPING", '{}')),
+        "DEFAULT_GROUP": os.environ.get("DEFAULT_GROUP", "gesammter Stamm"),
+        "APPLY_GROUP_MAPPING_TO_PARENTS": os.environ.get("APPLY_GROUP_MAPPING_TO_PARENTS", "False").lower() == "true",
+        "APPLY_DEFAULT_GROUP_TO_PARENTS": os.environ.get("APPLY_DEFAULT_GROUP_TO_PARENTS", "True").lower() == "true",
+        "RUN_SCHEDULE": os.environ.get("RUN_SCHEDULE", "single"),
+        "NOTIFICATION_EMAIL": os.environ["NOTIFICATION_EMAIL"],
+        "SMTP_SERVER": os.environ["SMTP_SERVER"],
+        "SMTP_PORT": int(os.environ["SMTP_PORT"]),
+        "SMTP_USERNAME": os.environ["SMTP_USERNAME"],
+        "SMTP_PASSWORD": os.environ["SMTP_PASSWORD"],
+        "STATE_FILE": os.environ.get("STATE_FILE", "/app/dangling_contacts_state.json"),
+        "MV_USERNAME": os.environ["MV_USERNAME"],
+        "MV_PASSWORD": os.environ["MV_PASSWORD"],
+        "LOG_LEVEL": os.environ.get("LOG_LEVEL", "INFO"),
+        "DRY_RUN": os.environ.get("DRY_RUN", "False").lower() == "true",  # New configuration option
     }
-    return config
 
 CONFIG = load_config()
 
 # Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=getattr(logging, CONFIG["LOG_LEVEL"]), 
+                    format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 class UserDto:
-    def __init__(self, firstname: str, lastname: str, own_email: str, parent_email: str, groups: List[str]):
+    def __init__(self, firstname: str, lastname: str, own_email: str, secondary_email: str, parent_email: str, groups: List[str]):
         self.firstname = firstname
         self.lastname = lastname
         self.own_email = own_email
+        secondary_email = secondary_email
         self.parent_email = parent_email
         self.groups = groups
 
     @property
     def fullname(self) -> str:
         return f"{self.firstname} {self.lastname}"
+    
+    
 
 def fetch_contacts() -> List[Tuple[str, str, str]]:
     storage = vdirsyncer.storage.CardDAVStorage(
@@ -121,19 +130,105 @@ def add_connector_info(vcard: vobject.vCard):
         vcard.add('note').value = NOTE_TEXT
 
 def save_vcard(storage: vdirsyncer.storage.CardDAVStorage, vcard: vobject.vCard, href: str, etag: str):
-    if href and etag:
-        storage.update(href, vcard.serialize(), etag)
+    if CONFIG["DRY_RUN"]:
+        action = "Would update" if href else "Would create"
+        logger.info(f"[DRY RUN] {action} contact card for: {vcard.fn.value}")
     else:
-        storage.upload(vcard.serialize())
-    logger.info(f"{'Updated' if href else 'Created'} contact card for: {vcard.fn.value}")
+        if href and etag:
+            storage.update(href, vcard.serialize(), etag)
+        else:
+            storage.upload(vcard.serialize())
+        logger.info(f"{'Updated' if href else 'Created'} contact card for: {vcard.fn.value}")
+
+def convert_excel_to_userdto(file_path: str) -> List[UserDto]:
+    df = pd.read_excel(file_path)
+
+    users = []
+    for _, row in df.iterrows():
+        status = row['Status']
+        if status.lower() != "aktiv":
+            continue
+        firstname = row['Vorname']
+        lastname = row['Nachname']
+        own_email = row['eMail']
+        secondary_email = row['eMail2']
+        parent_email = row['eMail_Eltern']
+
+        if pd.notna(own_email) and pd.notna(secondary_email) and pd.notna(parent_email):
+            continue
+        
+        groups = []
+        if pd.notna(row['Kleingruppe']):
+            groups.append(row['Kleingruppe'])
+
+        user = UserDto(
+            firstname=firstname,
+            lastname=lastname,
+            own_email=own_email,
+            secondary_email=secondary_email,
+            parent_email=parent_email,
+            groups=groups
+        )
+        users.append(user)
+
+    return users
 
 def fetch_users_from_mv() -> List[UserDto]:
-    # Logic to fetch users from MV
-    # For testing purposes, we'll use sample data
-    return [
-        UserDto("John", "Doe", "john@example.com", "parent@example.com", ["Sippe Greif", "RR's"]),
-        UserDto("Jane", "Smith", "jane@example.com", "parent2@example.com", ["Sippe Orca"])
-    ]
+    auth_url = "https://mv.meinbdp.de/ica/rest/nami/auth/manual/sessionStartup"
+    auth_headers = {
+        "Content-Type": "application/x-www-form-urlencoded",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:128.0) Gecko/20100101 Firefox/128.0",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/png,image/svg+xml,*/*;q=0.8"
+    }
+    auth_data = {
+        "username": CONFIG["MV_USERNAME"],
+        "password": CONFIG["MV_PASSWORD"],
+        "redirectTo": "app.jsp",
+        "Login": "Anmelden"
+    }
+
+    session = requests.Session()
+
+    auth_response = session.post(auth_url, headers=auth_headers, data=auth_data)
+
+    if auth_response.status_code == 200:
+        logger.info("Authentication successful!")
+    else:
+        logger.error(f"Authentication failed with status code: {auth_response.status_code}")
+        logger.error(auth_response.text)
+        return []
+
+    get_url = "https://mv.meinbdp.de/ica/rest/nami/search-multi/export-result-list"
+    params = {
+        'searchedValues': '{"vorname":"","nachname":"","spitzname":"","mitgliedsNummber":"","mglWohnort":"","alterVon":"","alterBis":"","mglStatusId":null,"funktion":"","mglTypeId":[],"organisation":"","tagId":[],"bausteinIncludedId":[],"zeitschriftenversand":false,"searchName":"","taetigkeitId":[],"untergliederungId":[],"mitAllenTaetigkeiten":false,"withEndedTaetigkeiten":false,"ebeneId":null,"grpNummer":"","grpName":"","gruppierung1Id":null,"gruppierung2Id":null,"gruppierung3Id":null,"gruppierung4Id":null,"gruppierung5Id":null,"gruppierung6Id":null,"inGrp":false,"unterhalbGrp":false,"privacy":"","searchType":"MITGLIEDER"}',
+        'reportType': 7
+    }
+
+    get_response = session.get(get_url, params=params)
+
+    if get_response.status_code == 200:
+        logger.info("Data fetched successfully!")
+    
+        output_file = "/tmp/fetched_data.xlsx"
+    
+        with open(output_file, "wb") as file:
+            file.write(get_response.content)
+    
+        logger.info(f"Data saved to {output_file}")
+
+        users = convert_excel_to_userdto(output_file)
+
+        try:
+            os.remove(output_file)
+            logger.info(f"Temporary file {output_file} has been deleted.")
+        except OSError as e:
+            logger.error(f"Error deleting temporary file {output_file}: {e}")
+
+        return users
+    else:
+        logger.error(f"GET request failed with status code: {get_response.status_code}")
+        logger.error(get_response.text)
+        return []
 
 def load_dangling_contacts_state() -> Dict[str, Dict]:
     if os.path.exists(CONFIG["STATE_FILE"]):

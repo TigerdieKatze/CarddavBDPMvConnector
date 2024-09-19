@@ -1,3 +1,5 @@
 vdirsyncer
+requests
 vobject
 schedule
+pandas
