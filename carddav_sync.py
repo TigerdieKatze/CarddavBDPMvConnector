@@ -1,56 +1,15 @@
-import os
-import json
-import logging
-import requests
 import vdirsyncer.storage
 import vdirsyncer.exceptions
 import vobject
 from typing import List, Tuple, Dict
-import schedule
-import time
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 from datetime import datetime
-import pandas as pd
-from flask import Flask, request, jsonify
-from flask_cors import CORS
-from threading import Thread
+import os
+import json
+from config import CONFIG, logger
+from mv_integration import fetch_users_from_mv
+from notifications import send_email
 
-app = Flask(__name__)
-CORS(app)
-
-CONFIG_FILE = '/app/config/config.json'
-
-def load_config():
-    with open(CONFIG_FILE, 'r') as f:
-        return json.load(f)
-
-def save_config(config):
-    with open(CONFIG_FILE, 'w') as f:
-        json.dump(config, f, indent=2)
-
-CONFIG = load_config()
-
-# Configure logging
-logging.basicConfig(level=getattr(logging, CONFIG.get("LOG_LEVEL", "INFO")),
-                    format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
-
-class UserDto:
-    def __init__(self, firstname: str, lastname: str, own_email: str, secondary_email: str, parent_email: str, groups: List[str]):
-        self.firstname = firstname
-        self.lastname = lastname
-        self.own_email = own_email
-        secondary_email = secondary_email
-        self.parent_email = parent_email
-        self.groups = groups
-
-    @property
-    def fullname(self) -> str:
-        return f"{self.firstname} {self.lastname}"
-    
-    
+from models import UserDto
 
 def fetch_contacts() -> List[Tuple[str, str, str]]:
     storage = vdirsyncer.storage.CardDAVStorage(
@@ -133,96 +92,6 @@ def save_vcard(storage: vdirsyncer.storage.CardDAVStorage, vcard: vobject.vCard,
             storage.upload(vcard.serialize())
         logger.info(f"{'Updated' if href else 'Created'} contact card for: {vcard.fn.value}")
 
-def convert_excel_to_userdto(file_path: str) -> List[UserDto]:
-    df = pd.read_excel(file_path)
-
-    users = []
-    for _, row in df.iterrows():
-        status = row['Status']
-        if status.lower() != "aktiv":
-            continue
-        firstname = row['Vorname']
-        lastname = row['Nachname']
-        own_email = row['eMail']
-        secondary_email = row['eMail2']
-        parent_email = row['eMail_Eltern']
-
-        if pd.notna(own_email) and pd.notna(secondary_email) and pd.notna(parent_email):
-            continue
-        
-        groups = []
-        if pd.notna(row['Kleingruppe']):
-            groups.append(row['Kleingruppe'])
-
-        user = UserDto(
-            firstname=firstname,
-            lastname=lastname,
-            own_email=own_email,
-            secondary_email=secondary_email,
-            parent_email=parent_email,
-            groups=groups
-        )
-        users.append(user)
-
-    return users
-
-def fetch_users_from_mv() -> List[UserDto]:
-    auth_url = "https://mv.meinbdp.de/ica/rest/nami/auth/manual/sessionStartup"
-    auth_headers = {
-        "Content-Type": "application/x-www-form-urlencoded",
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:128.0) Gecko/20100101 Firefox/128.0",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/png,image/svg+xml,*/*;q=0.8"
-    }
-    auth_data = {
-        "username": CONFIG["MV_USERNAME"],
-        "password": CONFIG["MV_PASSWORD"],
-        "redirectTo": "app.jsp",
-        "Login": "Anmelden"
-    }
-
-    session = requests.Session()
-
-    auth_response = session.post(auth_url, headers=auth_headers, data=auth_data)
-
-    if auth_response.status_code == 200:
-        logger.info("Authentication successful!")
-    else:
-        logger.error(f"Authentication failed with status code: {auth_response.status_code}")
-        logger.error(auth_response.text)
-        return []
-
-    get_url = "https://mv.meinbdp.de/ica/rest/nami/search-multi/export-result-list"
-    params = {
-        'searchedValues': '{"vorname":"","nachname":"","spitzname":"","mitgliedsNummber":"","mglWohnort":"","alterVon":"","alterBis":"","mglStatusId":null,"funktion":"","mglTypeId":[],"organisation":"","tagId":[],"bausteinIncludedId":[],"zeitschriftenversand":false,"searchName":"","taetigkeitId":[],"untergliederungId":[],"mitAllenTaetigkeiten":false,"withEndedTaetigkeiten":false,"ebeneId":null,"grpNummer":"","grpName":"","gruppierung1Id":null,"gruppierung2Id":null,"gruppierung3Id":null,"gruppierung4Id":null,"gruppierung5Id":null,"gruppierung6Id":null,"inGrp":false,"unterhalbGrp":false,"privacy":"","searchType":"MITGLIEDER"}',
-        'reportType': 7
-    }
-
-    get_response = session.get(get_url, params=params)
-
-    if get_response.status_code == 200:
-        logger.info("Data fetched successfully!")
-    
-        output_file = "/tmp/fetched_data.xlsx"
-    
-        with open(output_file, "wb") as file:
-            file.write(get_response.content)
-    
-        logger.info(f"Data saved to {output_file}")
-
-        users = convert_excel_to_userdto(output_file)
-
-        try:
-            os.remove(output_file)
-            logger.info(f"Temporary file {output_file} has been deleted.")
-        except OSError as e:
-            logger.error(f"Error deleting temporary file {output_file}: {e}")
-
-        return users
-    else:
-        logger.error(f"GET request failed with status code: {get_response.status_code}")
-        logger.error(get_response.text)
-        return []
-
 def load_dangling_contacts_state() -> Dict[str, Dict]:
     if os.path.exists(CONFIG["STATE_FILE"]):
         with open(CONFIG["STATE_FILE"], "r") as f:
@@ -232,23 +101,6 @@ def load_dangling_contacts_state() -> Dict[str, Dict]:
 def save_dangling_contacts_state(state: Dict[str, Dict]):
     with open(CONFIG["STATE_FILE"], "w") as f:
         json.dump(state, f)
-
-def send_email(subject: str, body: str):
-    msg = MIMEMultipart()
-    msg['From'] = CONFIG["SMTP_USERNAME"]
-    msg['To'] = CONFIG["NOTIFICATION_EMAIL"]
-    msg['Subject'] = subject
-
-    msg.attach(MIMEText(body, 'plain'))
-
-    try:
-        with smtplib.SMTP(CONFIG["SMTP_SERVER"], CONFIG["SMTP_PORT"]) as server:
-            server.starttls()
-            server.login(CONFIG["SMTP_USERNAME"], CONFIG["SMTP_PASSWORD"])
-            server.send_message(msg)
-        logger.info(f"Email sent: {subject}")
-    except Exception as e:
-        logger.error(f"Failed to send email: {e}")
 
 def check_dangling_contacts(storage: vdirsyncer.storage.CardDAVStorage, contacts: List[Tuple[str, str, str]], mv_users: List[UserDto]):
     mv_user_names = set([user.fullname for user in mv_users] + [f"{user.fullname} (Eltern)" for user in mv_users if user.parent_email])
@@ -300,102 +152,3 @@ def sync_contacts():
         update_or_create_contact_card(storage, contacts, user)
     
     check_dangling_contacts(storage, contacts, mv_users)
-
-def main():
-    if CONFIG["RUN_SCHEDULE"] == "daily":
-        schedule.every().day.at("04:00").do(sync_contacts)
-        while True:
-            schedule.run_pending()
-            time.sleep(60)
-    else:
-        sync_contacts()
-
-# Global variable to store the last sync status
-last_sync_status = {"status": "Not started", "last_run": None, "details": None}
-
-def sync_contacts():
-    global last_sync_status
-    try:
-        logger.info("Starting synchronization")
-        last_sync_status["status"] = "In progress"
-        last_sync_status["last_run"] = datetime.now().isoformat()
-
-        storage = vdirsyncer.storage.CardDAVStorage(
-            url=CONFIG["CARDDAV_URL"],
-            username=CONFIG["USERNAME"],
-            password=CONFIG["PASSWORD"]
-        )
-        
-        contacts = fetch_contacts()
-        mv_users = fetch_users_from_mv()
-        
-        for user in mv_users:
-            update_or_create_contact_card(storage, contacts, user)
-        
-        check_dangling_contacts(storage, contacts, mv_users)
-
-        last_sync_status["status"] = "Completed"
-        last_sync_status["details"] = f"Processed {len(mv_users)} users"
-        logger.info("Synchronization completed successfully")
-    except Exception as e:
-        last_sync_status["status"] = "Failed"
-        last_sync_status["details"] = str(e)
-        logger.error(f"Synchronization failed: {e}")
-
-def run_scheduled_sync():
-    while True:
-        schedule.run_pending()
-        time.sleep(60)
-
-@app.route('/sync', methods=['POST'])
-def trigger_sync():
-    thread = Thread(target=sync_contacts)
-    thread.start()
-    return jsonify({"message": "Synchronization started"}), 202
-
-@app.route('/status', methods=['GET'])
-def get_status():
-    return jsonify(last_sync_status)
-
-@app.route('/config', methods=['GET', 'POST'])
-def manage_config():
-    global CONFIG
-    configurable_fields = [
-        "GROUP_MAPPING",
-        "DEFAULT_GROUP",
-        "APPLY_GROUP_MAPPING_TO_PARENTS",
-        "APPLY_DEFAULT_GROUP_TO_PARENTS",
-        "RUN_SCHEDULE",
-        "NOTIFICATION_EMAIL",
-        "DRY_RUN"
-    ]
-    
-    if request.method == 'GET':
-        return jsonify({field: CONFIG[field] for field in configurable_fields})
-    
-    elif request.method == 'POST':
-        new_config = request.json
-        for key, value in new_config.items():
-            if key in configurable_fields:
-                CONFIG[key] = value
-        
-        save_config(CONFIG)
-        
-        # If RUN_SCHEDULE has changed, update the schedule
-        if "RUN_SCHEDULE" in new_config:
-            schedule.clear()
-            if CONFIG["RUN_SCHEDULE"] == "daily":
-                schedule.every().day.at("04:00").do(sync_contacts)
-        
-        return jsonify({
-            "message": "Configuration updated",
-            "new_config": {field: CONFIG[field] for field in configurable_fields}
-        }), 200
-
-if __name__ == "__main__":
-    if CONFIG["RUN_SCHEDULE"] == "daily":
-        schedule.every().day.at("04:00").do(sync_contacts)
-        sync_thread = Thread(target=run_scheduled_sync)
-        sync_thread.start()
-    
-    app.run(host='0.0.0.0', port=5000)
