@@ -1,0 +1,20 @@
+{
+    "CARDDAV_URL": "https://your-carddav-server.com/dav/",
+    "USERNAME": "your_carddav_username",
+    "PASSWORD": "your_carddav_password",
+    "GROUP_MAPPING": {},
+    "DEFAULT_GROUP": "gesammter Stamm",
+    "APPLY_GROUP_MAPPING_TO_PARENTS": false,
+    "APPLY_DEFAULT_GROUP_TO_PARENTS": true,
+    "RUN_SCHEDULE": "single",
+    "NOTIFICATION_EMAIL": "admin@example.com",
+    "SMTP_SERVER": "smtp.example.com",
+    "SMTP_PORT": 587,
+    "SMTP_USERNAME": "your_smtp_username",
+    "SMTP_PASSWORD": "your_smtp_password",
+    "STATE_FILE": "/app/data/dangling_contacts_state.json",
+    "MV_USERNAME": "your_mv_username",
+    "MV_PASSWORD": "your_mv_password",
+    "LOG_LEVEL": "INFO",
+    "DRY_RUN": false
+}

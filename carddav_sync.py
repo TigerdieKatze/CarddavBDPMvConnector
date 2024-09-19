@@ -13,34 +13,27 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from datetime import datetime
 import pandas as pd
+from flask import Flask, request, jsonify
+from flask_cors import CORS
+from threading import Thread
 
-# Load configuration from environment variables
+app = Flask(__name__)
+CORS(app)
+
+CONFIG_FILE = '/app/config/config.json'
+
 def load_config():
-    return {
-        "CARDDAV_URL": os.environ["CARDDAV_URL"],
-        "USERNAME": os.environ["USERNAME"],
-        "PASSWORD": os.environ["PASSWORD"],
-        "GROUP_MAPPING": json.loads(os.environ.get("GROUP_MAPPING", '{}')),
-        "DEFAULT_GROUP": os.environ.get("DEFAULT_GROUP", "gesammter Stamm"),
-        "APPLY_GROUP_MAPPING_TO_PARENTS": os.environ.get("APPLY_GROUP_MAPPING_TO_PARENTS", "False").lower() == "true",
-        "APPLY_DEFAULT_GROUP_TO_PARENTS": os.environ.get("APPLY_DEFAULT_GROUP_TO_PARENTS", "True").lower() == "true",
-        "RUN_SCHEDULE": os.environ.get("RUN_SCHEDULE", "single"),
-        "NOTIFICATION_EMAIL": os.environ["NOTIFICATION_EMAIL"],
-        "SMTP_SERVER": os.environ["SMTP_SERVER"],
-        "SMTP_PORT": int(os.environ["SMTP_PORT"]),
-        "SMTP_USERNAME": os.environ["SMTP_USERNAME"],
-        "SMTP_PASSWORD": os.environ["SMTP_PASSWORD"],
-        "STATE_FILE": os.environ.get("STATE_FILE", "/app/dangling_contacts_state.json"),
-        "MV_USERNAME": os.environ["MV_USERNAME"],
-        "MV_PASSWORD": os.environ["MV_PASSWORD"],
-        "LOG_LEVEL": os.environ.get("LOG_LEVEL", "INFO"),
-        "DRY_RUN": os.environ.get("DRY_RUN", "False").lower() == "true",  # New configuration option
-    }
+    with open(CONFIG_FILE, 'r') as f:
+        return json.load(f)
+
+def save_config(config):
+    with open(CONFIG_FILE, 'w') as f:
+        json.dump(config, f, indent=2)
 
 CONFIG = load_config()
 
 # Configure logging
-logging.basicConfig(level=getattr(logging, CONFIG["LOG_LEVEL"]), 
+logging.basicConfig(level=getattr(logging, CONFIG.get("LOG_LEVEL", "INFO")),
                     format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
@@ -317,5 +310,92 @@ def main():
     else:
         sync_contacts()
 
+# Global variable to store the last sync status
+last_sync_status = {"status": "Not started", "last_run": None, "details": None}
+
+def sync_contacts():
+    global last_sync_status
+    try:
+        logger.info("Starting synchronization")
+        last_sync_status["status"] = "In progress"
+        last_sync_status["last_run"] = datetime.now().isoformat()
+
+        storage = vdirsyncer.storage.CardDAVStorage(
+            url=CONFIG["CARDDAV_URL"],
+            username=CONFIG["USERNAME"],
+            password=CONFIG["PASSWORD"]
+        )
+        
+        contacts = fetch_contacts()
+        mv_users = fetch_users_from_mv()
+        
+        for user in mv_users:
+            update_or_create_contact_card(storage, contacts, user)
+        
+        check_dangling_contacts(storage, contacts, mv_users)
+
+        last_sync_status["status"] = "Completed"
+        last_sync_status["details"] = f"Processed {len(mv_users)} users"
+        logger.info("Synchronization completed successfully")
+    except Exception as e:
+        last_sync_status["status"] = "Failed"
+        last_sync_status["details"] = str(e)
+        logger.error(f"Synchronization failed: {e}")
+
+def run_scheduled_sync():
+    while True:
+        schedule.run_pending()
+        time.sleep(60)
+
+@app.route('/sync', methods=['POST'])
+def trigger_sync():
+    thread = Thread(target=sync_contacts)
+    thread.start()
+    return jsonify({"message": "Synchronization started"}), 202
+
+@app.route('/status', methods=['GET'])
+def get_status():
+    return jsonify(last_sync_status)
+
+@app.route('/config', methods=['GET', 'POST'])
+def manage_config():
+    global CONFIG
+    configurable_fields = [
+        "GROUP_MAPPING",
+        "DEFAULT_GROUP",
+        "APPLY_GROUP_MAPPING_TO_PARENTS",
+        "APPLY_DEFAULT_GROUP_TO_PARENTS",
+        "RUN_SCHEDULE",
+        "NOTIFICATION_EMAIL",
+        "DRY_RUN"
+    ]
+    
+    if request.method == 'GET':
+        return jsonify({field: CONFIG[field] for field in configurable_fields})
+    
+    elif request.method == 'POST':
+        new_config = request.json
+        for key, value in new_config.items():
+            if key in configurable_fields:
+                CONFIG[key] = value
+        
+        save_config(CONFIG)
+        
+        # If RUN_SCHEDULE has changed, update the schedule
+        if "RUN_SCHEDULE" in new_config:
+            schedule.clear()
+            if CONFIG["RUN_SCHEDULE"] == "daily":
+                schedule.every().day.at("04:00").do(sync_contacts)
+        
+        return jsonify({
+            "message": "Configuration updated",
+            "new_config": {field: CONFIG[field] for field in configurable_fields}
+        }), 200
+
 if __name__ == "__main__":
-    main()
+    if CONFIG["RUN_SCHEDULE"] == "daily":
+        schedule.every().day.at("04:00").do(sync_contacts)
+        sync_thread = Thread(target=run_scheduled_sync)
+        sync_thread.start()
+    
+    app.run(host='0.0.0.0', port=5000)

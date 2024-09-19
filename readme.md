@@ -6,7 +6,8 @@
 - [Prerequisites](#prerequisites)
 - [Installation](#installation)
 - [Usage](#usage)
-- [Configuration Options](#configuration-options)
+- [Configuration](#configuration)
+- [Security Note](#security-note)
 - [Dry Run Mode](#dry-run-mode)
 - [Warnings](#warnings)
 - [Risks](#risks)
@@ -26,13 +27,13 @@ CarddavBDPMvConnector is an automated tool designed to synchronize member data b
 - 🕒 Daily scheduling option for regular updates
 - 🧪 Dry run mode for testing without making changes
 - 📧 Email notifications for important events (e.g., dangling contacts)
+- 🔧 Configurable settings via API
+- 🔒 API accessible only from the local machine for enhanced security
 
 ## Prerequisites
 
 - Docker
-- Access to a CardDAV server
-- MV system credentials
-- SMTP server for sending notifications
+- Docker Compose
 
 ## Installation
 
@@ -42,55 +43,58 @@ CarddavBDPMvConnector is an automated tool designed to synchronize member data b
    cd CarddavBDPMvConnector
    ```
 
-2. Build the Docker image:
+2. Create a `config` directory and copy the default `config.json` file:
    ```bash
-   docker build -t carddav-sync .
+   mkdir config
+   cp config.json config/
    ```
+
+3. Edit the `config/config.json` file with your actual configuration.
 
 ## Usage
 
-Run the Docker container with the following environment variables:
+1. Start the Docker container:
+   ```bash
+   docker-compose up -d
+   ```
+
+2. The API will be available at `http://localhost:5000`, but only accessible from the machine running Docker. You can use the following endpoints:
+
+   - Trigger sync: `POST /sync`
+   - Check status: `GET /status`
+   - Get configuration: `GET /config`
+   - Update configuration: `POST /config`
+
+   Example usage (from the machine running Docker):
+   ```bash
+   curl http://localhost:5000/status
+   ```
+
+## Configuration
+
+You can update the following configuration options via the API:
+
+- GROUP_MAPPING
+- DEFAULT_GROUP
+- APPLY_GROUP_MAPPING_TO_PARENTS
+- APPLY_DEFAULT_GROUP_TO_PARENTS
+- RUN_SCHEDULE
+- NOTIFICATION_EMAIL
+- DRY_RUN
+
+Example of updating configuration (from the machine running Docker):
 
 ```bash
-docker run -d \
-  -e CARDDAV_URL=https://your-carddav-server.com/dav/ \
-  -e USERNAME=your_carddav_username \
-  -e PASSWORD=your_carddav_password \
-  -e RUN_SCHEDULE=daily \
-  -e NOTIFICATION_EMAIL=admin@example.com \
-  -e SMTP_SERVER=smtp.example.com \
-  -e SMTP_PORT=587 \
-  -e SMTP_USERNAME=your_smtp_username \
-  -e SMTP_PASSWORD=your_smtp_password \
-  -e MV_USERNAME=your_mv_username \
-  -e MV_PASSWORD=your_mv_password \
-  -e DRY_RUN=False \
-  -v /path/on/host:/app \
-  carddav-sync
+curl -X POST -H "Content-Type: application/json" -d '{"DEFAULT_GROUP": "New Default Group", "DRY_RUN": true}' http://localhost:5000/config
 ```
 
-Replace the environment variables with your actual configuration.
+## Security Note
 
-## Configuration Options
-
-| Variable | Description |
-|----------|-------------|
-| `CARDDAV_URL` | URL of your CardDAV server |
-| `USERNAME` | CardDAV server username |
-| `PASSWORD` | CardDAV server password |
-| `RUN_SCHEDULE` | Set to "daily" for scheduled runs or "single" for one-time execution |
-| `NOTIFICATION_EMAIL` | Email address for receiving notifications |
-| `SMTP_SERVER` | SMTP server for sending notifications |
-| `SMTP_PORT` | SMTP server port |
-| `SMTP_USERNAME` | SMTP server username |
-| `SMTP_PASSWORD` | SMTP server password |
-| `MV_USERNAME` | Mitgliederverwaltung (MV) system username |
-| `MV_PASSWORD` | Mitgliederverwaltung (MV) system password |
-| `DRY_RUN` | Set to "True" for testing without making changes, "False" for normal operation |
+The API is intentionally configured to be accessible only from the machine running Docker. This prevents unauthorized access from external networks. If you need to access the API from another machine, you should use a secure method such as SSH tunneling.
 
 ## Dry Run Mode
 
-To test the synchronization without making changes to your CardDAV server, set the `DRY_RUN` environment variable to "True". This will log all actions that would be taken without actually modifying any data.
+To test the synchronization without making changes to your CardDAV server, set the `DRY_RUN` configuration option to `true`. This will log all actions that would be taken without actually modifying any data.
 
 ## Warnings
 
@@ -98,7 +102,7 @@ To test the synchronization without making changes to your CardDAV server, set t
 
 1. **Group Assignments**: Ensure that groups in the MV system are correctly assigned to Sippen, Runden, and Meuten. Incorrect assignments will lead to improper synchronization.
 
-2. **Credential Security**: Handle all credentials (CardDAV, MV, SMTP) with utmost care. Never hardcode them in the script or expose them in public repositories.
+2. **Credential Security**: Handle all credentials (CardDAV, MV, SMTP) with utmost care. Never expose them in public repositories.
 
 3. **Regular Updates**: Keep all dependencies up-to-date to mitigate potential security vulnerabilities.
 
