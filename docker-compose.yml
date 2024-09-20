@@ -1,14 +1,12 @@
-version: '3.8'
-
 services:
   carddav-sync:
-    build: ./backend/Dockerfile
+    build: ./backend/
     volumes:
       - ./config:/app/config
       - ./data:/app/data
     restart: unless-stopped
   frontend:
-    build: ./frontend/Dockerfile
+    build: ./frontend/
     ports:
       - "127.0.0.1:3000:3000"
     restart: unless-stopped

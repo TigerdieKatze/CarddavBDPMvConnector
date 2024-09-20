@@ -1,4 +1,4 @@
-import vdirsyncer.storage
+from vdirsyncer.storage.dav import CardDAVStorage
 import vdirsyncer.exceptions
 import vobject
 from typing import List, Tuple, Dict
@@ -12,7 +12,7 @@ from notifications import send_email
 from models import UserDto
 
 def fetch_contacts() -> List[Tuple[str, str, str]]:
-    storage = vdirsyncer.storage.CardDAVStorage(
+    storage = CardDAVStorage(
         url=CONFIG["CARDDAV_URL"],
         username=CONFIG["USERNAME"],
         password=CONFIG["PASSWORD"]
@@ -25,7 +25,7 @@ def fetch_contacts() -> List[Tuple[str, str, str]]:
         logger.error(f"Error fetching contacts: {e}")
         return []
 
-def update_or_create_contact_card(storage: vdirsyncer.storage.CardDAVStorage, contacts: List[Tuple[str, str, str]], user: UserDto):
+def update_or_create_contact_card(storage: CardDAVStorage, contacts: List[Tuple[str, str, str]], user: UserDto):
     user_vcard, user_href, user_etag = find_or_create_vcard(contacts, user.fullname)
     update_vcard(user_vcard, user, is_parent=False)
 
@@ -81,7 +81,7 @@ def add_connector_info(vcard: vobject.vCard):
     if 'note' not in vcard.contents or vcard.note.value != NOTE_TEXT:
         vcard.add('note').value = NOTE_TEXT
 
-def save_vcard(storage: vdirsyncer.storage.CardDAVStorage, vcard: vobject.vCard, href: str, etag: str):
+def save_vcard(storage: CardDAVStorage, vcard: vobject.vCard, href: str, etag: str):
     if CONFIG["DRY_RUN"]:
         action = "Would update" if href else "Would create"
         logger.info(f"[DRY RUN] {action} contact card for: {vcard.fn.value}")
@@ -102,7 +102,7 @@ def save_dangling_contacts_state(state: Dict[str, Dict]):
     with open(CONFIG["STATE_FILE"], "w") as f:
         json.dump(state, f)
 
-def check_dangling_contacts(storage: vdirsyncer.storage.CardDAVStorage, contacts: List[Tuple[str, str, str]], mv_users: List[UserDto]):
+def check_dangling_contacts(storage: CardDAVStorage, contacts: List[Tuple[str, str, str]], mv_users: List[UserDto]):
     mv_user_names = set([user.fullname for user in mv_users] + [f"{user.fullname} (Eltern)" for user in mv_users if user.parent_email])
     dangling_state = load_dangling_contacts_state()
     current_date = datetime.now().strftime("%Y-%m-%d")
@@ -139,7 +139,7 @@ def check_dangling_contacts(storage: vdirsyncer.storage.CardDAVStorage, contacts
     save_dangling_contacts_state(dangling_state)
 
 def sync_contacts():
-    storage = vdirsyncer.storage.CardDAVStorage(
+    storage = CardDAVStorage(
         url=CONFIG["CARDDAV_URL"],
         username=CONFIG["USERNAME"],
         password=CONFIG["PASSWORD"]
