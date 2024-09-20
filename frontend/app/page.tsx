@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Badge } from "@/components/ui/badge"
 import { AlertCircle, CheckCircle2, RefreshCw, Settings, X, Server } from "lucide-react"
 
-const API_BASE_URL = 'http://carddav-sync:5000'
+const API_BASE_URL = 'http://127.0.0.1:5000'
 
 type ToastProps = {
   message: string
