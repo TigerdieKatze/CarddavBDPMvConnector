@@ -14,5 +14,9 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-    - name: Build the Docker image
-      run: docker build . --file Dockerfile --tag carddavsync:$(date +%s)
+
+    - name: Build the backend Docker image
+      run: docker build ./backend --file Dockerfile --tag carddavsync:$(date +%s)
+      
+    - name: Build the frontend Docker image
+      run: docker build ./frontend --file Dockerfile --tag carddavsyncadminpanel:$(date +%s)

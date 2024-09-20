@@ -1,7 +1,0 @@
-vdirsyncer
-requests
-vobject
-schedule
-pandas
-Flask
-Flask-CORS
