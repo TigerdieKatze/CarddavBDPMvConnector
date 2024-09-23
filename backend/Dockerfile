@@ -31,5 +31,5 @@ USER appuser
 # Expose the port the app runs on
 EXPOSE 5000
 
-# Run the application
-CMD ["python", "main.py"]
+# Run the application with Gunicorn
+CMD ["gunicorn", "--bind", "0.0.0.0:5000", "main:app"]
