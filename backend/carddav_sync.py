@@ -172,21 +172,17 @@ def save_vcard(session, vcard: vobject.vCard, href: str, etag: str):
         logger.info(f"[DRY RUN] {action} contact card for: {vcard.fn.value}")
     else:
         parsed_uri = urlparse(CONFIG['CARDDAV_URL'])
-        url = f"{parsed_uri.scheme}://{parsed_uri.netloc}{href}" if href else f"{CONFIG['CARDDAV_URL']}{vcard.uid.value}.vcf"
+        url = f"{parsed_uri.scheme}://{parsed_uri.netloc}{href}" if href else f"{CONFIG['CARDDAV_URL']}/{vcard.uid.value}.vcf"
         headers = {
             'Content-Type': 'text/vcard; charset=utf-8',
             'If-Match': etag
         } if etag else {'Content-Type': 'text/vcard; charset=utf-8'}
+        logger.info(f"Saving vcard with url: {url}")
 
         vcard_data = vcard.serialize()
         
         try:
-            if href:
-                # Update existing vCard
-                response = session.put(url, data=vcard_data, headers=headers, auth=HTTPBasicAuth(CONFIG['CARDDAV_USERNAME'], CONFIG['CARDDAV_PASSWORD']))
-            else:
-                # Create new vCard
-                response = session.put(url, data=vcard_data, headers=headers, auth=HTTPBasicAuth(CONFIG['CARDDAV_USERNAME'], CONFIG['CARDDAV_PASSWORD']))
+            response = session.put(url, data=vcard_data, headers=headers, auth=HTTPBasicAuth(CONFIG['CARDDAV_USERNAME'], CONFIG['CARDDAV_PASSWORD']))
             
             response.raise_for_status()
             new_etag = response.headers.get('ETag', '').strip('"')
