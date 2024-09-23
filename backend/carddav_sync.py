@@ -30,16 +30,16 @@ def log_execution_time(func):
 def safe_string(value):
     """Convert any value to a safe string, raising ValueError for NaN, 'nan', or empty strings."""
     if pd.isna(value):
-        raise ValueError("Cannot convert NaN to a string")
+        logger.warning("Cannot convert NaN to a string")
     elif isinstance(value, str):
         cleaned = value.strip().lower()
         if not cleaned or cleaned == "nan":
-            raise ValueError("Empty string or 'nan' is not allowed")
+            logger.warning("Empty string or 'nan' is not allowed")
         return value.strip()
     else:
         result = str(value).strip()
         if not result or result.lower() == "nan":
-            raise ValueError("Conversion resulted in an empty string or 'nan'")
+            logger.warning("Conversion resulted in an empty string or 'nan'")
         return result
 
 def generate_uid():
