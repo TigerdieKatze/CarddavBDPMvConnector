@@ -139,7 +139,6 @@ def update_vcard(vcard: vobject.vCard, user: UserDto, is_parent: bool):
             vcard.add('email').value = email_value
     except ValueError as e:
         logger.error(str(e))
-        raise  # Re-raise the exception to be caught in the calling function
 
     update_group_membership(vcard, user.groups, is_parent)
     add_connector_info(vcard)
