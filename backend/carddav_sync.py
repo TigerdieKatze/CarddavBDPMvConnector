@@ -86,7 +86,6 @@ def apply_group_mapping(groups: List[str], is_parent: bool) -> List[str]:
                 mapped_group = CONFIG["GROUP_MAPPING"][group]
                 if mapped_group not in mapped_groups:
                     mapped_groups.append(mapped_group)
-                    logger.info(f"Added mapped group: {mapped_group}")
 
     return mapped_groups
 
@@ -94,7 +93,6 @@ def add_default_group(groups: List[str], is_parent: bool) -> List[str]:
     if not is_parent or CONFIG["APPLY_DEFAULT_GROUP_TO_PARENTS"]:
         if CONFIG["DEFAULT_GROUP"] not in groups:
             groups.append(CONFIG["DEFAULT_GROUP"])
-            logger.info(f"Added default group: {CONFIG['DEFAULT_GROUP']}")
     return groups
 
 def add_connector_info(vcard: vobject.vCard):
