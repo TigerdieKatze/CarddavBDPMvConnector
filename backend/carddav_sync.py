@@ -97,7 +97,7 @@ def generate_uid():
 def get_user_email(user: UserDto, is_parent: bool) -> str:
     if is_parent:
         if pd.notna(user.parent_email):
-            raise ValueError(f"Parent email is required for {user.fullname}")
+            raise ValueError(f"Parent email is required for creating Parent VCard of {user.fullname}")
         return user.parent_email
     
     if pd.notna(user.own_email) and pd.notna(user.own_email.strip()):
