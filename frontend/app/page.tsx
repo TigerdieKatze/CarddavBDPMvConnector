@@ -30,7 +30,7 @@ const Toast: React.FC<ToastProps> = ({ message, type, onClose }) => {
 }
 
 export default function Home() {
-  const [status, setStatus] = useState<{ message: string } | null>(null)
+  const [status, setStatus] = useState<{ details: String, last_run: string, status: string  } | null>(null)
   const [config, setConfig] = useState<Record<string, any> | null>(null)
   const [loading, setLoading] = useState(true)
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
@@ -123,15 +123,15 @@ export default function Home() {
             <CardHeader>
               <div className="flex justify-between items-center">
                 <CardTitle className="text-2xl">Sync Status</CardTitle>
-                <Badge variant={status?.message === "Synchronization completed successfully" ? "default" : "destructive"}>
-                  {status?.message === "Synchronization completed successfully" ? (
+                <Badge variant={status?.status === "Completed" ? "default" : "destructive"}>
+                  {status?.status === "Completed" ? (
                     <><CheckCircle2 className="mr-1 h-4 w-4" /> Sync Successful</>
                   ) : (
                     <><AlertCircle className="mr-1 h-4 w-4" /> Sync Issue</>
                   )}
                 </Badge>
               </div>
-              <CardDescription>{status?.message || "Status unknown"}</CardDescription>
+              <CardDescription>{status?.details || "Status unknown"}</CardDescription>
             </CardHeader>
             <CardFooter className="bg-gray-50">
               <div className="flex justify-between w-full">
