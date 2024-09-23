@@ -62,7 +62,7 @@ const GroupMappingItem: React.FC<{
 }
 
 export default function Home() {
-  const [status, setStatus] = useState<{ details: String, last_run: string, status: string  } | null>(null)
+  const [status, setStatus] = useState<{ details: string, last_run: string, status: string  } | null>(null)
   const [config, setConfig] = useState<Record<string, any> | null>(null)
   const [groupMappings, setGroupMappings] = useState<GroupMapping[]>([])
   const [loading, setLoading] = useState(true)
