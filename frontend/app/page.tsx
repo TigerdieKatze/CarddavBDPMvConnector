@@ -8,7 +8,7 @@ import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { AlertCircle, CheckCircle2, RefreshCw, Settings, X, Server } from "lucide-react"
+import { AlertCircle, CheckCircle2, RefreshCw, Settings, X, Server, Plus, Trash2 } from "lucide-react"
 
 const API_BASE_URL = 'http://127.0.0.1:5000'
 
@@ -29,9 +29,41 @@ const Toast: React.FC<ToastProps> = ({ message, type, onClose }) => {
   )
 }
 
+type GroupMapping = {
+  checkGroup: string;
+  referenceGroup: string;
+}
+
+const GroupMappingItem: React.FC<{
+  mapping: GroupMapping;
+  onUpdate: (updatedMapping: GroupMapping) => void;
+  onRemove: () => void;
+}> = ({ mapping, onUpdate, onRemove }) => {
+  return (
+    <div className="flex items-center space-x-2 mb-2">
+      <Input
+        placeholder="Check Group"
+        value={mapping.checkGroup}
+        onChange={(e) => onUpdate({ ...mapping, checkGroup: e.target.value })}
+        className="flex-1"
+      />
+      <Input
+        placeholder="Reference Group"
+        value={mapping.referenceGroup}
+        onChange={(e) => onUpdate({ ...mapping, referenceGroup: e.target.value })}
+        className="flex-1"
+      />
+      <Button variant="destructive" size="icon" onClick={onRemove}>
+        <Trash2 className="h-4 w-4" />
+      </Button>
+    </div>
+  )
+}
+
 export default function Home() {
   const [status, setStatus] = useState<{ details: String, last_run: string, status: string  } | null>(null)
   const [config, setConfig] = useState<Record<string, any> | null>(null)
+  const [groupMappings, setGroupMappings] = useState<GroupMapping[]>([])
   const [loading, setLoading] = useState(true)
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
 
@@ -61,6 +93,10 @@ export default function Home() {
       const response = await fetch(`${API_BASE_URL}/config`)
       const data = await response.json()
       setConfig(data)
+      setGroupMappings(Object.entries(data.GROUP_MAPPING).map(([checkGroup, referenceGroup]) => ({
+        checkGroup,
+        referenceGroup: referenceGroup as string
+      })))
       setLoading(false)
     } catch (error) {
       console.error('Error fetching config:', error)
@@ -82,12 +118,13 @@ export default function Home() {
 
   const updateConfig = async (newConfig: Partial<Record<string, any>>) => {
     try {
+      const updatedConfig = { ...config, ...newConfig }
       const response = await fetch(`${API_BASE_URL}/config`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(newConfig),
+        body: JSON.stringify(updatedConfig),
       })
       const data = await response.json()
       setConfig(data.new_config)
@@ -96,6 +133,19 @@ export default function Home() {
       console.error('Error updating config:', error)
       showToast("Failed to update configuration", "error")
     }
+  }
+
+  const updateGroupMappings = (newMappings: GroupMapping[]) => {
+    setGroupMappings(newMappings)
+    const newGroupMapping = newMappings.reduce((acc, mapping) => {
+      acc[mapping.checkGroup] = mapping.referenceGroup
+      return acc
+    }, {} as Record<string, string>)
+    updateConfig({ GROUP_MAPPING: newGroupMapping })
+  }
+
+  const addGroupMapping = () => {
+    setGroupMappings([...groupMappings, { checkGroup: '', referenceGroup: '' }])
   }
 
   if (loading) {
@@ -153,15 +203,29 @@ export default function Home() {
               <CardDescription>Manage your CardDAV sync settings</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="group-mapping">Group Mapping</Label>
-                  <Input
-                    id="group-mapping"
-                    value={JSON.stringify(config?.GROUP_MAPPING)}
-                    onChange={(e) => updateConfig({ GROUP_MAPPING: JSON.parse(e.target.value) })}
+              <div className="space-y-4">
+                <Label>Group Mappings</Label>
+                {groupMappings.map((mapping, index) => (
+                  <GroupMappingItem
+                    key={index}
+                    mapping={mapping}
+                    onUpdate={(updatedMapping) => {
+                      const newMappings = [...groupMappings]
+                      newMappings[index] = updatedMapping
+                      updateGroupMappings(newMappings)
+                    }}
+                    onRemove={() => {
+                      const newMappings = groupMappings.filter((_, i) => i !== index)
+                      updateGroupMappings(newMappings)
+                    }}
                   />
-                </div>
+                ))}
+                <Button onClick={addGroupMapping} className="w-full">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Group Mapping
+                </Button>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <Label htmlFor="default-group">Default Group</Label>
                   <Input
@@ -222,7 +286,7 @@ export default function Home() {
               </div>
             </CardContent>
             <CardFooter className="bg-gray-50">
-              <Button onClick={() => showToast("Configuration saved", "success")} className="w-full">
+              <Button onClick={() => updateConfig(config || {})} className="w-full">
                 <Settings className="mr-2 h-4 w-4" />
                 Save Configuration
               </Button>
