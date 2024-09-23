@@ -1,3 +1,4 @@
+# main.py
 import schedule
 import time
 import json
@@ -44,7 +45,7 @@ def run_sync():
     except Exception as e:
         last_sync_status["status"] = "Failed"
         last_sync_status["details"] = str(e)
-        logger.error(f"Synchronization failed: {e}")
+        logger.error(f"Synchronization failed: {e}", exc_info=True)
         send_email("Synchronization Failed", f"Synchronization failed with error: {e}")
     finally:
         save_sync_status()
@@ -56,12 +57,14 @@ def run_scheduled_sync():
 
 @app.route('/sync', methods=['POST'])
 def trigger_sync():
+    logger.info("Manual sync triggered")
     thread = Thread(target=run_sync)
     thread.start()
     return jsonify({"message": "Synchronization started"}), 202
 
 @app.route('/status', methods=['GET'])
 def get_status():
+    logger.debug("Status requested")
     return jsonify(last_sync_status)
 
 @app.route('/config', methods=['GET', 'POST'])
@@ -77,13 +80,16 @@ def manage_config():
     ]
     
     if request.method == 'GET':
+        logger.debug("Configuration requested")
         return jsonify({field: CONFIG[field] for field in configurable_fields})
     
     elif request.method == 'POST':
+        logger.info("Updating configuration")
         new_config = request.json
         for key, value in new_config.items():
             if key in configurable_fields:
                 CONFIG[key] = value
+                logger.info(f"Updated config: {key} = {value}")
         
         save_config(CONFIG)
         
@@ -92,6 +98,7 @@ def manage_config():
             schedule.clear()
             if CONFIG["RUN_SCHEDULE"] == "daily":
                 schedule.every().day.at("04:00").do(run_sync)
+                logger.info("Updated sync schedule to daily at 04:00")
         
         return jsonify({
             "message": "Configuration updated",
@@ -100,10 +107,12 @@ def manage_config():
 
 if __name__ == "__main__":
     load_sync_status()  # Load the last sync status when starting the app
+    logger.info("Application started")
     
     if CONFIG["RUN_SCHEDULE"] == "daily":
         schedule.every().day.at("04:00").do(run_sync)
         sync_thread = Thread(target=run_scheduled_sync)
         sync_thread.start()
+        logger.info("Scheduled daily sync at 04:00")
     
     app.run(host='0.0.0.0', port=5000)

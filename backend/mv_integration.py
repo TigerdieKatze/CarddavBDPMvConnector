@@ -1,3 +1,4 @@
+# mv_integration.py
 import requests
 import pandas as pd
 import os
@@ -6,6 +7,7 @@ from config import CONFIG, logger
 from models import UserDto
 
 def fetch_users_from_mv() -> List[UserDto]:
+    logger.info("Fetching users from MV system")
     auth_url = "https://mv.meinbdp.de/ica/rest/nami/auth/manual/sessionStartup"
     auth_headers = {
         "Content-Type": "application/x-www-form-urlencoded",
@@ -39,7 +41,7 @@ def fetch_users_from_mv() -> List[UserDto]:
     get_response = session.get(get_url, params=params)
 
     if get_response.status_code == 200:
-        logger.info("Data fetched successfully!")
+        logger.info("Data fetched successfully from MV system")
     
         output_file = "/tmp/fetched_data.xlsx"
     
@@ -52,7 +54,7 @@ def fetch_users_from_mv() -> List[UserDto]:
 
         try:
             os.remove(output_file)
-            logger.info(f"Temporary file {output_file} has been deleted.")
+            logger.info(f"Temporary file {output_file} has been deleted")
         except OSError as e:
             logger.error(f"Error deleting temporary file {output_file}: {e}")
 
@@ -63,6 +65,7 @@ def fetch_users_from_mv() -> List[UserDto]:
         return []
 
 def convert_excel_to_userdto(file_path: str) -> List[UserDto]:
+    logger.info(f"Converting Excel file to UserDto objects: {file_path}")
     df = pd.read_excel(file_path)
 
     users = []
@@ -93,4 +96,5 @@ def convert_excel_to_userdto(file_path: str) -> List[UserDto]:
         )
         users.append(user)
 
+    logger.info(f"Converted {len(users)} users from Excel file")
     return users
