@@ -72,14 +72,13 @@ def update_or_create_contact_card(session, contacts: List[Tuple[str, str, str]],
     logger.info(f"Updating or creating contact card for user: {user.fullname}")
     user_vcard, user_href, user_etag = find_or_create_vcard(contacts, user.fullname)
     update_vcard(user_vcard, user, is_parent=False)
+    save_vcard(session, user_vcard, user_href, user_etag)
 
     if pd.notna(user.parent_email):
         logger.info(f"Updating or creating parent contact card for user: {user.fullname}")
         parent_vcard, parent_href, parent_etag = find_or_create_vcard(contacts, f"{user.fullname} (Eltern)")
         update_vcard(parent_vcard, user, is_parent=True)
-        save_vcard(session, parent_vcard, parent_href, parent_etag)
-
-    save_vcard(session, user_vcard, user_href, user_etag)
+        save_vcard(session, parent_vcard, parent_href, parent_etag)  
 
 def find_or_create_vcard(contacts: List[Tuple[str, str, str]], fullname: str) -> Tuple[vobject.vCard, str, str]:
     for href, etag, vcard_string in contacts:
@@ -89,7 +88,6 @@ def find_or_create_vcard(contacts: List[Tuple[str, str, str]], fullname: str) ->
             return vcard, href, etag
     logger.debug(f"Creating new vCard for {fullname}")
     return vobject.vCard(), None, None
-
 
 def generate_uid():
     return f"urn:uuid:{uuid.uuid4()}"
@@ -200,7 +198,6 @@ def save_vcard(session, vcard: vobject.vCard, href: str, etag: str):
             'Content-Type': 'text/vcard; charset=utf-8',
             'If-Match': etag
         } if etag else {'Content-Type': 'text/vcard; charset=utf-8'}
-        logger.info(f"Saving vcard with url: {url}")
 
         vcard_data = vcard.serialize()
         
