@@ -73,7 +73,7 @@ def update_or_create_contact_card(session, contacts: List[Tuple[str, str, str]],
     user_vcard, user_href, user_etag = find_or_create_vcard(contacts, user.fullname)
     update_vcard(user_vcard, user, is_parent=False)
 
-    if user.parent_email:
+    if pd.notna(user.parent_email):
         logger.info(f"Updating or creating parent contact card for user: {user.fullname}")
         parent_vcard, parent_href, parent_etag = find_or_create_vcard(contacts, f"{user.fullname} (Eltern)")
         update_vcard(parent_vcard, user, is_parent=True)
@@ -94,43 +94,47 @@ def find_or_create_vcard(contacts: List[Tuple[str, str, str]], fullname: str) ->
 def generate_uid():
     return f"urn:uuid:{uuid.uuid4()}"
 
+def safe_string(value):
+    if isinstance(value, str):
+        return value.strip()
+    elif pd.isna(value) or value is None:
+        return ""
+    else:
+        return str(value).strip()
+
 def get_user_email(user: UserDto, is_parent: bool) -> str:
     if is_parent:
-        if pd.notna(user.parent_email):
+        if pd.isna(user.parent_email):
             raise ValueError(f"Parent email is required for creating Parent VCard of {user.fullname}")
-        return user.parent_email
+        return safe_string(user.parent_email)
     
-    if pd.notna(user.own_email) and pd.notna(user.own_email.strip()):
-        return user.own_email
-    elif pd.notna(user.secondary_email) and pd.notna(user.secondary_email.strip()):
+    if user.own_email and safe_string(user.own_email):
+        return safe_string(user.own_email)
+    elif user.secondary_email and safe_string(user.secondary_email):
         logger.warning(f"Using secondary email for {user.fullname} as primary email is empty")
-        return user.secondary_email
+        return safe_string(user.secondary_email)
     else:
         raise ValueError(f"No valid email found for {user.fullname}")
 
 def update_vcard(vcard: vobject.vCard, user: UserDto, is_parent: bool):
     logger.debug(f"Updating vCard for {'parent of ' if is_parent else ''}{user.fullname}")
     
-    # Generate and add UID if it doesn't exist
     if 'uid' not in vcard.contents:
         vcard.add('uid').value = generate_uid()
         logger.debug(f"Generated new UID for {user.fullname}")
 
-    # Update or add FN (Formatted Name)
-    fn_value = f"{str(user.fullname)}{' (Eltern)' if is_parent else ''}"
+    fn_value = f"{safe_string(user.fullname)}{' (Eltern)' if is_parent else ''}"
     if 'fn' in vcard.contents:
         vcard.fn.value = fn_value
     else:
         vcard.add('fn').value = fn_value
 
-    # Update or add N (Name)
-    n_value = vobject.vcard.Name(family=str(user.lastname), given=str(user.firstname))
+    n_value = vobject.vcard.Name(family=safe_string(user.lastname), given=safe_string(user.firstname))
     if 'n' in vcard.contents:
         vcard.n.value = n_value
     else:
         vcard.add('n').value = n_value
 
-    # Update or add EMAIL
     try:
         email_value = get_user_email(user, is_parent)
         if 'email' in vcard.contents:
@@ -139,6 +143,7 @@ def update_vcard(vcard: vobject.vCard, user: UserDto, is_parent: bool):
             vcard.add('email').value = email_value
     except ValueError as e:
         logger.error(str(e))
+        raise
 
     update_group_membership(vcard, user.groups, is_parent)
     add_connector_info(vcard)
@@ -289,6 +294,7 @@ def delete_vcard(session, href: str, etag: str):
 @log_execution_time
 def sync_contacts():
     logger.info("Starting contact synchronization")
+    failed_contacts = []
     try:
         session = connect_to_carddav()
         contacts = fetch_contacts(session)
@@ -299,12 +305,25 @@ def sync_contacts():
                 update_or_create_contact_card(session, contacts, user)
             except Exception as e:
                 logger.error(f"Error processing user {user.fullname}: {str(e)}")
+                failed_contacts.append((user.fullname, str(e)))
         
         check_dangling_contacts(session, contacts, mv_users)
-        logger.info("Contact synchronization completed successfully")
+        logger.info("Contact synchronization completed")
     except Exception as e:
         logger.error(f"Error during contact synchronization: {str(e)}")
         send_email(
             "Synchronization Error",
             f"An error occurred during contact synchronization: {str(e)}"
         )
+    finally:
+        if failed_contacts:
+            logger.error("The following contacts failed to sync:")
+            for name, error in failed_contacts:
+                logger.error(f"- {name}: {error}")
+            send_email(
+                "Failed Contacts During Sync",
+                "The following contacts failed to sync:\n" + 
+                "\n".join([f"- {name}: {error}" for name, error in failed_contacts])
+            )
+        else:
+            logger.info("All contacts synced successfully")
