@@ -36,6 +36,7 @@ def run_sync():
     try:
         logger.info("Starting synchronization")
         last_sync_status["status"] = "In progress"
+        last_sync_status["details"] = "Synchronization in progress"
         last_sync_status["last_run"] = datetime.now().isoformat()
         save_sync_status()
         sync_contacts()

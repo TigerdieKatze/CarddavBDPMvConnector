@@ -2,7 +2,7 @@ import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, CheckCircle2, RefreshCw, Server } from "lucide-react";
+import { AlertCircle, CheckCircle2, RefreshCw, Loader2, Server } from "lucide-react";
 
 type StatusCardProps = {
   status: { details: string; last_run: string; status: string } | null;
@@ -16,9 +16,16 @@ export const StatusCard: React.FC<StatusCardProps> = ({ status, onRefresh, onTri
       <CardHeader>
         <div className="flex justify-between items-center">
           <CardTitle className="text-2xl">Sync Status</CardTitle>
-          <Badge variant={status?.status === "Completed" ? "default" : "destructive"}>
+          <Badge variant={
+              status?.status === "Completed" ? "default" :
+                status?.status === "In progress" ? "default" :
+                  "destructive"
+            }
+          >
             {status?.status === "Completed" ? (
               <><CheckCircle2 className="mr-1 h-4 w-4" /> Sync Successful</>
+            ) : status?.status === "In progress" ? (
+              <><Loader2 className="mr-1 h-4 w-4 animate-spin" /> Sync In Progress</>
             ) : (
               <><AlertCircle className="mr-1 h-4 w-4" /> Sync Issue</>
             )}
