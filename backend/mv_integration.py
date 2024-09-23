@@ -79,7 +79,7 @@ def convert_excel_to_userdto(file_path: str) -> List[UserDto]:
         secondary_email = row['eMail2']
         parent_email = row['eMail_Eltern']
 
-        if pd.notna(own_email) and pd.notna(secondary_email) and pd.notna(parent_email):
+        if pd.isna(own_email) and pd.isna(secondary_email) and pd.isna(parent_email):
             continue
         
         groups = []

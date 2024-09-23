@@ -100,9 +100,9 @@ def get_user_email(user: UserDto, is_parent: bool) -> str:
             raise ValueError(f"Parent email is required for {user.fullname}")
         return user.parent_email
     
-    if pd.isna(user.own_email) and pd.isna(user.own_email.strip()):
+    if pd.notna(user.own_email) and pd.notna(user.own_email.strip()):
         return user.own_email
-    elif pd.isna(user.secondary_email) and pd.isna(user.secondary_email.strip()):
+    elif pd.notna(user.secondary_email) and pd.notna(user.secondary_email.strip()):
         logger.warning(f"Using secondary email for {user.fullname} as primary email is empty")
         return user.secondary_email
     else:
