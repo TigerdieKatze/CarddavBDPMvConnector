@@ -12,6 +12,7 @@ from requests.auth import HTTPBasicAuth
 import xml.etree.ElementTree as ET
 import time
 import uuid
+from urllib.parse import urlparse
 
 def log_execution_time(func):
     def wrapper(*args, **kwargs):
@@ -170,7 +171,8 @@ def save_vcard(session, vcard: vobject.vCard, href: str, etag: str):
         action = "Would update" if href else "Would create"
         logger.info(f"[DRY RUN] {action} contact card for: {vcard.fn.value}")
     else:
-        url = f"{CONFIG['CARDDAV_URL']}{href}" if href else f"{CONFIG['CARDDAV_URL']}{vcard.uid.value}.vcf"
+        parsed_uri = urlparse(CONFIG['CARDDAV_URL'])
+        url = f"{parsed_uri.scheme}://{parsed_uri.netloc}{href}" if href else f"{CONFIG['CARDDAV_URL']}{vcard.uid.value}.vcf"
         headers = {
             'Content-Type': 'text/vcard; charset=utf-8',
             'If-Match': etag
