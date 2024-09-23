@@ -5,6 +5,7 @@
 - [Features](#features)
 - [Prerequisites](#prerequisites)
 - [Installation](#installation)
+- [Project Structure](#project-structure)
 - [Usage](#usage)
 - [Configuration](#configuration)
 - [Security Note](#security-note)
@@ -24,11 +25,11 @@ CarddavBDPMvConnector is an automated tool designed to synchronize member data b
 
 - 🔄 Automated synchronization between MV and CardDAV server
 - 👥 Support for group assignments (Sippen, Runden, and Meuten)
-- 🕒 Daily scheduling option for regular updates
+- 🕒 Configurable sync schedule (daily, weekly, monthly)
 - 🧪 Dry run mode for testing without making changes
 - 📧 Email notifications for important events (e.g., dangling contacts)
-- 🔧 Configurable settings via API
-- 🔒 API accessible only from the local machine for enhanced security
+- 🔧 Web-based admin panel for easy configuration and monitoring
+- 🔒 API and admin panel accessible only from the local machine for enhanced security
 
 ## Prerequisites
 
@@ -46,15 +47,21 @@ CarddavBDPMvConnector is an automated tool designed to synchronize member data b
 2. Create a `config` directory and copy the default `config.json` file:
    ```bash
    mkdir config
-   cp config.json config/
+   cp backend/config.json config/
    ```
 
 3. Edit the `config/config.json` file with your actual configuration.
 
+4. Build and start the Docker containers:
+   ```bash
+   docker-compose up -d
+   ```
+
 ## Project Structure
 
-The project is now structured into multiple modules for better organization:
+The project is now structured into backend and frontend components:
 
+### Backend
 - `main.py`: The entry point of the application, handling API routes and scheduling.
 - `config.py`: Manages loading and saving of configuration.
 - `models.py`: Contains data models used in the application.
@@ -62,50 +69,50 @@ The project is now structured into multiple modules for better organization:
 - `mv_integration.py`: Manages integration with the MV system.
 - `notifications.py`: Handles email notifications.
 
+### Frontend
+- Next.js application for the admin panel
+- Tailwind CSS for styling
+- React components for UI elements
+
 ## Usage
 
-1. Start the Docker container:
-   ```bash
-   docker-compose up -d
-   ```
+1. After starting the Docker containers, the services will be available at:
+   - Backend API: `http://localhost:5000`
+   - Frontend Admin Panel: `http://localhost:3000`
 
-2. The API will be available at `http://localhost:5000`, but only accessible from the machine running Docker. You can use the following endpoints:
+2. Access the admin panel by opening `http://localhost:3000` in your web browser.
 
+3. Use the admin panel to:
+   - View sync status
+   - Trigger manual synchronization
+   - Configure group mappings and other settings
+   - Toggle dry run mode
+
+4. The backend API endpoints (accessible only from the local machine):
    - Trigger sync: `POST /sync`
    - Check status: `GET /status`
    - Get configuration: `GET /config`
    - Update configuration: `POST /config`
 
-   Example usage (from the machine running Docker):
-   ```bash
-   curl http://localhost:5000/status
-   ```
-
 ## Configuration
 
-You can update the following configuration options via the API:
+You can update the following configuration options via the admin panel or API:
 
-- GROUP_MAPPING
-- DEFAULT_GROUP
-- APPLY_GROUP_MAPPING_TO_PARENTS
-- APPLY_DEFAULT_GROUP_TO_PARENTS
-- RUN_SCHEDULE
-- NOTIFICATION_EMAIL
-- DRY_RUN
-
-Example of updating configuration (from the machine running Docker):
-
-```bash
-curl -X POST -H "Content-Type: application/json" -d '{"DEFAULT_GROUP": "New Default Group", "DRY_RUN": true}' http://localhost:5000/config
-```
+- Group Mappings
+- Default Group
+- Apply Group Mapping to Parents
+- Apply Default Group to Parents
+- Run Schedule
+- Notification Email
+- Dry Run Mode
 
 ## Security Note
 
-The API is intentionally configured to be accessible only from the machine running Docker. This prevents unauthorized access from external networks. If you need to access the API from another machine, you should use a secure method such as SSH tunneling.
+The API and admin panel are intentionally configured to be accessible only from the machine running Docker. This prevents unauthorized access from external networks. If you need to access these services from another machine, you should use a secure method such as SSH tunneling.
 
 ## Dry Run Mode
 
-To test the synchronization without making changes to your CardDAV server, set the `DRY_RUN` configuration option to `true`. This will log all actions that would be taken without actually modifying any data.
+To test the synchronization without making changes to your CardDAV server, enable the "Dry Run" option in the admin panel. This will log all actions that would be taken without actually modifying any data.
 
 ## Warnings
 
@@ -138,7 +145,6 @@ To test the synchronization without making changes to your CardDAV server, set t
 ## TODO
 
 - [ ] Implement support for additional CardDAV servers
-- [ ] Create a web interface for easier configuration and monitoring
 - [ ] Enhance logging capabilities for better troubleshooting
 - [ ] Implement multi-language support for notifications and logs
 - [ ] Add unit and integration tests for improved reliability
