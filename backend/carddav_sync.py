@@ -93,6 +93,20 @@ def find_or_create_vcard(contacts: List[Tuple[str, str, str]], fullname: str) ->
 def generate_uid():
     return f"urn:uuid:{uuid.uuid4()}"
 
+def get_user_email(user: UserDto, is_parent: bool) -> str:
+    if is_parent:
+        if not user.parent_email:
+            raise ValueError(f"Parent email is required for {user.fullname}")
+        return user.parent_email
+    
+    if user.own_email and user.own_email.strip():
+        return user.own_email
+    elif user.secondary_email and user.secondary_email.strip():
+        logger.warning(f"Using secondary email for {user.fullname} as primary email is empty")
+        return user.secondary_email
+    else:
+        raise ValueError(f"No valid email found for {user.fullname}")
+
 def update_vcard(vcard: vobject.vCard, user: UserDto, is_parent: bool):
     logger.debug(f"Updating vCard for {'parent of ' if is_parent else ''}{user.fullname}")
     
@@ -102,25 +116,29 @@ def update_vcard(vcard: vobject.vCard, user: UserDto, is_parent: bool):
         logger.debug(f"Generated new UID for {user.fullname}")
 
     # Update or add FN (Formatted Name)
-    fn_value = f"{user.fullname}{' (Eltern)' if is_parent else ''}"
+    fn_value = f"{str(user.fullname)}{' (Eltern)' if is_parent else ''}"
     if 'fn' in vcard.contents:
         vcard.fn.value = fn_value
     else:
         vcard.add('fn').value = fn_value
 
     # Update or add N (Name)
-    n_value = vobject.vcard.Name(family=user.lastname, given=user.firstname)
+    n_value = vobject.vcard.Name(family=str(user.lastname), given=str(user.firstname))
     if 'n' in vcard.contents:
         vcard.n.value = n_value
     else:
         vcard.add('n').value = n_value
 
     # Update or add EMAIL
-    email_value = user.parent_email if is_parent else user.own_email
-    if 'email' in vcard.contents:
-        vcard.email.value = email_value
-    else:
-        vcard.add('email').value = email_value
+    try:
+        email_value = get_user_email(user, is_parent)
+        if 'email' in vcard.contents:
+            vcard.email.value = email_value
+        else:
+            vcard.add('email').value = email_value
+    except ValueError as e:
+        logger.error(str(e))
+        raise  # Re-raise the exception to be caught in the calling function
 
     update_group_membership(vcard, user.groups, is_parent)
     add_connector_info(vcard)
