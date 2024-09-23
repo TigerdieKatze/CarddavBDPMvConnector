@@ -28,13 +28,18 @@ def log_execution_time(func):
     return wrapper
 
 def safe_string(value):
-    """Convert any value to a safe string."""
-    if isinstance(value, str):
+    """Convert any value to a safe string, raising ValueError for NaN or empty strings."""
+    if pd.isna(value):
+        raise ValueError("Cannot convert NaN to a string")
+    elif isinstance(value, str):
+        if not value.strip():
+            raise ValueError("Empty string is not allowed")
         return value.strip()
-    elif pd.isna(value) or value is None:
-        return ""
     else:
-        return str(value).strip()
+        result = str(value).strip()
+        if not result:
+            raise ValueError("Conversion resulted in an empty string")
+        return result
 
 def generate_uid():
     """Generate a unique identifier for vCards."""
@@ -100,13 +105,13 @@ def find_or_create_vcard(contacts: List[Tuple[str, str, str]], fullname: str) ->
 def get_user_email(user: UserDto, is_parent: bool) -> str:
     """Get the appropriate email for a user or parent."""
     if is_parent:
-        if pd.isna(user.parent_email):
-            raise ValueError(f"Parent email is required for creating Parent VCard of {user.fullname}")
+        if pd.isna(user.parent_email) or not user.parent_email.strip():
+            raise ValueError(f"Valid parent email is required for creating Parent VCard of {user.fullname}")
         return safe_string(user.parent_email)
     
-    if user.own_email and safe_string(user.own_email):
+    if not pd.isna(user.own_email) and user.own_email.strip():
         return safe_string(user.own_email)
-    elif user.secondary_email and safe_string(user.secondary_email):
+    elif not pd.isna(user.secondary_email) and user.secondary_email.strip():
         logger.warning(f"Using secondary email for {user.fullname} as primary email is empty")
         return safe_string(user.secondary_email)
     else:
