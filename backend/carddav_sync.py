@@ -11,6 +11,7 @@ from models import UserDto
 from requests.auth import HTTPBasicAuth
 import xml.etree.ElementTree as ET
 import time
+import uuid
 
 def log_execution_time(func):
     def wrapper(*args, **kwargs):
@@ -87,8 +88,18 @@ def find_or_create_vcard(contacts: List[Tuple[str, str, str]], fullname: str) ->
     logger.debug(f"Creating new vCard for {fullname}")
     return vobject.vCard(), None, None
 
+
+def generate_uid():
+    return f"urn:uuid:{uuid.uuid4()}"
+
 def update_vcard(vcard: vobject.vCard, user: UserDto, is_parent: bool):
     logger.debug(f"Updating vCard for {'parent of ' if is_parent else ''}{user.fullname}")
+    
+    # Generate and add UID if it doesn't exist
+    if 'uid' not in vcard.contents:
+        vcard.add('uid').value = generate_uid()
+        logger.debug(f"Generated new UID for {user.fullname}")
+
     vcard.add('fn').value = f"{user.fullname}{' (Eltern)' if is_parent else ''}"
     vcard.add('n').value = vobject.vcard.Name(family=user.lastname, given=user.firstname)
     vcard.add('email').value = user.parent_email if is_parent else user.own_email
