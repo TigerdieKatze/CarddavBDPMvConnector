@@ -1,10 +1,11 @@
 import schedule
 import time
+import json
+import os
 from threading import Thread
 from datetime import datetime
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-
 from config import CONFIG, logger, save_config
 from carddav_sync import sync_contacts
 from notifications import send_email
@@ -12,8 +13,22 @@ from notifications import send_email
 app = Flask(__name__)
 CORS(app)
 
+# Path for saving sync status
+SYNC_STATUS_FILE = '/app/data/sync_state.json'
+
 # Global variable to store the last sync status
 last_sync_status = {"status": "Not started", "last_run": None, "details": None}
+
+def save_sync_status():
+    os.makedirs(os.path.dirname(SYNC_STATUS_FILE), exist_ok=True)
+    with open(SYNC_STATUS_FILE, 'w') as f:
+        json.dump(last_sync_status, f)
+
+def load_sync_status():
+    global last_sync_status
+    if os.path.exists(SYNC_STATUS_FILE):
+        with open(SYNC_STATUS_FILE, 'r') as f:
+            last_sync_status = json.load(f)
 
 def run_sync():
     global last_sync_status
@@ -21,9 +36,8 @@ def run_sync():
         logger.info("Starting synchronization")
         last_sync_status["status"] = "In progress"
         last_sync_status["last_run"] = datetime.now().isoformat()
-
+        save_sync_status()
         sync_contacts()
-
         last_sync_status["status"] = "Completed"
         last_sync_status["details"] = "Synchronization completed successfully"
         logger.info("Synchronization completed successfully")
@@ -32,6 +46,8 @@ def run_sync():
         last_sync_status["details"] = str(e)
         logger.error(f"Synchronization failed: {e}")
         send_email("Synchronization Failed", f"Synchronization failed with error: {e}")
+    finally:
+        save_sync_status()
 
 def run_scheduled_sync():
     while True:
@@ -83,6 +99,8 @@ def manage_config():
         }), 200
 
 if __name__ == "__main__":
+    load_sync_status()  # Load the last sync status when starting the app
+    
     if CONFIG["RUN_SCHEDULE"] == "daily":
         schedule.every().day.at("04:00").do(run_sync)
         sync_thread = Thread(target=run_scheduled_sync)

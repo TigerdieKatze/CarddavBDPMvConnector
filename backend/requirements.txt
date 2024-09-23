@@ -1,5 +1,5 @@
-vdirsyncer
 requests
+openpyxl
 vobject
 schedule
 pandas

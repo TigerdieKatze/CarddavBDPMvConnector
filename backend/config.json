@@ -1,7 +1,7 @@
 {
     "CARDDAV_URL": "https://your-carddav-server.com/dav/",
-    "USERNAME": "your_carddav_username",
-    "PASSWORD": "your_carddav_password",
+    "CARDDAV_USERNAME": "your_carddav_username",
+    "CARDDAV_PASSWORD": "your_carddav_password",
     "GROUP_MAPPING": {},
     "DEFAULT_GROUP": "gesammter Stamm",
     "APPLY_GROUP_MAPPING_TO_PARENTS": false,
