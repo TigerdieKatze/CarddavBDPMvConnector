@@ -1,3 +1,4 @@
+import pandas as pd
 import requests
 import vobject
 from typing import List, Tuple, Dict
@@ -95,13 +96,13 @@ def generate_uid():
 
 def get_user_email(user: UserDto, is_parent: bool) -> str:
     if is_parent:
-        if not user.parent_email:
+        if pd.notna(user.parent_email):
             raise ValueError(f"Parent email is required for {user.fullname}")
         return user.parent_email
     
-    if user.own_email and user.own_email.strip():
+    if pd.isna(user.own_email) and pd.isna(user.own_email.strip()):
         return user.own_email
-    elif user.secondary_email and user.secondary_email.strip():
+    elif pd.isna(user.secondary_email) and pd.isna(user.secondary_email.strip()):
         logger.warning(f"Using secondary email for {user.fullname} as primary email is empty")
         return user.secondary_email
     else:
