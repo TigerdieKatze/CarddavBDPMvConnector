@@ -64,6 +64,14 @@ def fetch_users_from_mv() -> List[UserDto]:
         logger.error(get_response.text)
         return []
 
+def safe_string(value):
+    if isinstance(value, str):
+        return value.strip()
+    elif value is None or pd.isna(value):  # Check for None or NaN values
+        return ""
+    else:
+        return str(value).strip()
+
 def convert_excel_to_userdto(file_path: str) -> List[UserDto]:
     logger.info(f"Converting Excel file to UserDto objects: {file_path}")
     df = pd.read_excel(file_path)
@@ -73,11 +81,11 @@ def convert_excel_to_userdto(file_path: str) -> List[UserDto]:
         status = row['Status']
         if status.lower() != "aktiv":
             continue
-        firstname = row['Vorname']
-        lastname = row['Nachname']
-        own_email = row['eMail'].strip()
-        secondary_email = row['eMail2'].strip()
-        parent_email = row['eMail_Eltern'].strip()
+        firstname = safe_string(row['Vorname'])
+        lastname = safe_string(row['Nachname'])
+        own_email = safe_string(row['eMail'])
+        secondary_email = safe_string(row['eMail2'])
+        parent_email = safe_string(row['eMail_Eltern'])
 
         if pd.notna(own_email) and pd.notna(secondary_email) and pd.notna(parent_email):
             continue
