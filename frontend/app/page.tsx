@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { AlertCircle, CheckCircle2, RefreshCw, Settings, X, Server, Plus, Trash2 } from "lucide-react"
+import { Separator } from "@/components/ui/separator"
 
 const API_BASE_URL = 'http://127.0.0.1:5000'
 
@@ -204,7 +205,7 @@ export default function Home() {
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-4">
-                <Label>Group Mappings</Label>
+                <h3 className="text-lg font-semibold">Group Mappings</h3>
                 {groupMappings.map((mapping, index) => (
                   <GroupMappingItem
                     key={index}
@@ -225,63 +226,75 @@ export default function Home() {
                   Add Group Mapping
                 </Button>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="default-group">Default Group</Label>
-                  <Input
-                    id="default-group"
-                    value={config?.DEFAULT_GROUP}
-                    onChange={(e) => updateConfig({ DEFAULT_GROUP: e.target.value })}
-                  />
+
+              <Separator />
+
+              <div className="space-y-6">
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold">Group Settings</h3>
+                  <div className="space-y-2">
+                    <Label htmlFor="default-group">Default Group</Label>
+                    <Input
+                      id="default-group"
+                      value={config?.DEFAULT_GROUP}
+                      onChange={(e) => updateConfig({ DEFAULT_GROUP: e.target.value })}
+                    />
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="apply-group-mapping"
+                      checked={config?.APPLY_GROUP_MAPPING_TO_PARENTS}
+                      onCheckedChange={(checked) => updateConfig({ APPLY_GROUP_MAPPING_TO_PARENTS: checked })}
+                    />
+                    <Label htmlFor="apply-group-mapping">Apply Group Mapping to Parents</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="apply-default-group"
+                      checked={config?.APPLY_DEFAULT_GROUP_TO_PARENTS}
+                      onCheckedChange={(checked) => updateConfig({ APPLY_DEFAULT_GROUP_TO_PARENTS: checked })}
+                    />
+                    <Label htmlFor="apply-default-group">Apply Default Group to Parents</Label>
+                  </div>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <Switch
-                    id="apply-group-mapping"
-                    checked={config?.APPLY_GROUP_MAPPING_TO_PARENTS}
-                    onCheckedChange={(checked) => updateConfig({ APPLY_GROUP_MAPPING_TO_PARENTS: checked })}
-                  />
-                  <Label htmlFor="apply-group-mapping">Apply Group Mapping to Parents</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Switch
-                    id="apply-default-group"
-                    checked={config?.APPLY_DEFAULT_GROUP_TO_PARENTS}
-                    onCheckedChange={(checked) => updateConfig({ APPLY_DEFAULT_GROUP_TO_PARENTS: checked })}
-                  />
-                  <Label htmlFor="apply-default-group">Apply Default Group to Parents</Label>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="run-schedule">Run Schedule</Label>
-                  <Select
-                    value={config?.RUN_SCHEDULE}
-                    onValueChange={(value) => updateConfig({ RUN_SCHEDULE: value })}
-                  >
-                    <SelectTrigger id="run-schedule">
-                      <SelectValue placeholder="Select schedule" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="daily">Daily</SelectItem>
-                      <SelectItem value="weekly">Weekly</SelectItem>
-                      <SelectItem value="monthly">Monthly</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="notification-email">Notification Email</Label>
-                  <Input
-                    id="notification-email"
-                    type="email"
-                    value={config?.NOTIFICATION_EMAIL}
-                    onChange={(e) => updateConfig({ NOTIFICATION_EMAIL: e.target.value })}
-                  />
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Switch
-                    id="dry-run"
-                    checked={config?.DRY_RUN}
-                    onCheckedChange={(checked) => updateConfig({ DRY_RUN: checked })}
-                  />
-                  <Label htmlFor="dry-run">Dry Run</Label>
+
+                <Separator />
+
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold">Sync Settings</h3>
+                  <div className="space-y-2">
+                    <Label htmlFor="run-schedule">Run Schedule</Label>
+                    <Select
+                      value={config?.RUN_SCHEDULE}
+                      onValueChange={(value) => updateConfig({ RUN_SCHEDULE: value })}
+                    >
+                      <SelectTrigger id="run-schedule">
+                        <SelectValue placeholder="Select schedule" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="daily">Daily</SelectItem>
+                        <SelectItem value="weekly">Weekly</SelectItem>
+                        <SelectItem value="monthly">Monthly</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="notification-email">Notification Email</Label>
+                    <Input
+                      id="notification-email"
+                      type="email"
+                      value={config?.NOTIFICATION_EMAIL}
+                      onChange={(e) => updateConfig({ NOTIFICATION_EMAIL: e.target.value })}
+                    />
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="dry-run"
+                      checked={config?.DRY_RUN}
+                      onCheckedChange={(checked) => updateConfig({ DRY_RUN: checked })}
+                    />
+                    <Label htmlFor="dry-run">Dry Run</Label>
+                  </div>
                 </div>
               </div>
             </CardContent>
