@@ -100,9 +100,27 @@ def update_vcard(vcard: vobject.vCard, user: UserDto, is_parent: bool):
         vcard.add('uid').value = generate_uid()
         logger.debug(f"Generated new UID for {user.fullname}")
 
-    vcard.add('fn').value = f"{user.fullname}{' (Eltern)' if is_parent else ''}"
-    vcard.add('n').value = vobject.vcard.Name(family=user.lastname, given=user.firstname)
-    vcard.add('email').value = user.parent_email if is_parent else user.own_email
+    # Update or add FN (Formatted Name)
+    fn_value = f"{user.fullname}{' (Eltern)' if is_parent else ''}"
+    if 'fn' in vcard.contents:
+        vcard.fn.value = fn_value
+    else:
+        vcard.add('fn').value = fn_value
+
+    # Update or add N (Name)
+    n_value = vobject.vcard.Name(family=user.lastname, given=user.firstname)
+    if 'n' in vcard.contents:
+        vcard.n.value = n_value
+    else:
+        vcard.add('n').value = n_value
+
+    # Update or add EMAIL
+    email_value = user.parent_email if is_parent else user.own_email
+    if 'email' in vcard.contents:
+        vcard.email.value = email_value
+    else:
+        vcard.add('email').value = email_value
+
     update_group_membership(vcard, user.groups, is_parent)
     add_connector_info(vcard)
 
@@ -110,8 +128,16 @@ def update_group_membership(vcard: vobject.vCard, groups: List[str], is_parent: 
     logger.debug(f"Updating group membership for {'parent' if is_parent else 'user'}")
     mapped_groups = apply_group_mapping(groups, is_parent)
     final_groups = add_default_group(mapped_groups, is_parent)
-    categories = vcard.add('categories')
-    categories.value = final_groups + (['Eltern'] if is_parent else [])
+    
+    # Add 'Eltern' category for parent contacts
+    if is_parent:
+        final_groups.append('Eltern')
+    
+    # Update or add CATEGORIES
+    if 'categories' in vcard.contents:
+        vcard.categories.value = final_groups
+    else:
+        vcard.add('categories').value = final_groups
 
 def apply_group_mapping(groups: List[str], is_parent: bool) -> List[str]:
     mapped_groups = groups.copy()
