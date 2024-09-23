@@ -75,9 +75,9 @@ def convert_excel_to_userdto(file_path: str) -> List[UserDto]:
             continue
         firstname = row['Vorname']
         lastname = row['Nachname']
-        own_email = row['eMail']
-        secondary_email = row['eMail2']
-        parent_email = row['eMail_Eltern']
+        own_email = row['eMail'].strip()
+        secondary_email = row['eMail2'].strip()
+        parent_email = row['eMail_Eltern'].strip()
 
         if pd.notna(own_email) and pd.notna(secondary_email) and pd.notna(parent_email):
             continue
