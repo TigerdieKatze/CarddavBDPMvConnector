@@ -3,6 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { motion } from 'framer-motion';
 
 type ConfigSettingsProps = {
   config: Record<string, any>;
@@ -12,7 +13,12 @@ type ConfigSettingsProps = {
 export const ConfigSettings: React.FC<ConfigSettingsProps> = ({ config, onUpdate }) => {
   return (
     <div className="space-y-6">
-      <div className="space-y-4">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="space-y-4"
+      >
         <h3 className="text-lg font-semibold">Group Settings</h3>
         <div className="space-y-2">
           <Label htmlFor="default-group">Default Group</Label>
@@ -20,6 +26,7 @@ export const ConfigSettings: React.FC<ConfigSettingsProps> = ({ config, onUpdate
             id="default-group"
             value={config?.DEFAULT_GROUP}
             onChange={(e) => onUpdate('DEFAULT_GROUP', e.target.value)}
+            className="transition-all duration-200 focus:ring-2 focus:ring-primary"
           />
         </div>
         <div className="flex items-center space-x-2">
@@ -38,9 +45,14 @@ export const ConfigSettings: React.FC<ConfigSettingsProps> = ({ config, onUpdate
           />
           <Label htmlFor="apply-default-group">Apply Default Group to Parents</Label>
         </div>
-      </div>
+      </motion.div>
 
-      <div className="space-y-4">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.2 }}
+        className="space-y-4"
+      >
         <h3 className="text-lg font-semibold">Sync Settings</h3>
         <div className="space-y-2">
           <Label htmlFor="run-schedule">Run Schedule</Label>
@@ -48,7 +60,7 @@ export const ConfigSettings: React.FC<ConfigSettingsProps> = ({ config, onUpdate
             value={config?.RUN_SCHEDULE}
             onValueChange={(value) => onUpdate('RUN_SCHEDULE', value)}
           >
-            <SelectTrigger id="run-schedule">
+            <SelectTrigger id="run-schedule" className="w-full">
               <SelectValue placeholder="Select schedule" />
             </SelectTrigger>
             <SelectContent>
@@ -65,6 +77,7 @@ export const ConfigSettings: React.FC<ConfigSettingsProps> = ({ config, onUpdate
             type="email"
             value={config?.NOTIFICATION_EMAIL}
             onChange={(e) => onUpdate('NOTIFICATION_EMAIL', e.target.value)}
+            className="transition-all duration-200 focus:ring-2 focus:ring-primary"
           />
         </div>
         <div className="flex items-center space-x-2">
@@ -75,7 +88,7 @@ export const ConfigSettings: React.FC<ConfigSettingsProps> = ({ config, onUpdate
           />
           <Label htmlFor="dry-run">Dry Run</Label>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 };

@@ -17,9 +17,6 @@ export default function RootLayout({
     <html lang="en">
       <body className={inter.className}>
         <main>{children}</main>
-        <footer className="bg-muted text-muted-foreground p-4 text-center">
-          <p>&copy; 2023 CardDAV Sync Admin. All rights reserved.</p>
-        </footer>
       </body>
     </html>
   )
