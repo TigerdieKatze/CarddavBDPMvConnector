@@ -1,36 +1,99 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# CarddavBDPMvConnector Frontend
+
+This is the frontend component of the CarddavBDPMvConnector project, providing an admin panel for managing the CardDAV synchronization process.
+
+## Features
+
+- 📊 Dashboard for viewing sync status and triggering manual syncs
+- ⚙️ Configuration management for CardDAV sync settings
+- 🎨 Modern, responsive UI built with Next.js and Tailwind CSS
+- 🔒 Secure, locally-accessible admin interface
+
+## Tech Stack
+
+- [Next.js](https://nextjs.org/) - React framework for production
+- [React](https://reactjs.org/) - JavaScript library for building user interfaces
+- [Tailwind CSS](https://tailwindcss.com/) - Utility-first CSS framework
+- [Radix UI](https://www.radix-ui.com/) - Unstyled, accessible UI components
+- [Lucide React](https://lucide.dev/) - Beautiful & consistent icon toolkit
+
+## Prerequisites
+
+- Node.js 18.17.0 or later
+- npm or yarn
 
 ## Getting Started
 
-First, run the development server:
+1. Navigate to the frontend directory:
+   ```bash
+   cd frontend
+   ```
+
+2. Install dependencies:
+   ```bash
+   npm install
+   # or
+   yarn install
+   ```
+
+3. Run the development server:
+   ```bash
+   npm run dev
+   # or
+   yarn dev
+   ```
+
+4. Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+
+## Project Structure
+
+- `app/`: Contains the main application code
+  - `page.tsx`: The main dashboard component
+  - `layout.tsx`: The root layout component
+  - `globals.css`: Global styles
+- `components/`: Reusable React components
+  - `ui/`: UI components from shadcn/ui
+- `lib/`: Utility functions
+- `public/`: Static assets
+
+## Customization
+
+### Styling
+
+This project uses Tailwind CSS for styling. You can customize the design by modifying the `tailwind.config.ts` file and the component-specific styles.
+
+### Adding New Features
+
+To add new features or pages:
+
+1. Create a new component in the `components/` directory
+2. Add a new route in the `app/` directory if needed
+3. Update the main `page.tsx` file to include your new component
+
+## Building for Production
+
+To create an optimized production build:
 
 ```bash
-npm run dev
+npm run build
 # or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+yarn build
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The build artifacts will be stored in the `.next/` directory.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Deployment
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+This frontend is designed to be deployed alongside the backend using Docker. Refer to the main project README for full deployment instructions.
 
-## Learn More
+## Contributing
 
-To learn more about Next.js, take a look at the following resources:
+Contributions to improve the admin panel are welcome. Please ensure you follow the project's coding standards and submit a pull request for review.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## License
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+This project is licensed under the MIT License - see the [LICENSE](../LICENSE) file in the root directory for details.
 
-## Deploy on Vercel
+---
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+For more information on using Next.js, check out the [Next.js documentation](https://nextjs.org/docs).
