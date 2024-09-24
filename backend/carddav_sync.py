@@ -333,7 +333,7 @@ def update_or_create_contact_card(session, contacts: List[Tuple[str, str, str]],
         errors.append(f"User contact: {str(e)}")
 
     # Process parent contact if parent email exists
-    if pd.notna(user.parent_email):
+    if pd.notna(user.parent_email) and user.parent_email.lower() != "nan":
         try:
             parent_vcard, parent_href, parent_etag = find_or_create_vcard(contacts, f"{user.fullname} (Eltern)")
             update_vcard(parent_vcard, user, is_parent=True)
