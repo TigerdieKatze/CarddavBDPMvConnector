@@ -1,12 +1,11 @@
 'use client'
 
 import React, { useState, useEffect, useCallback } from 'react'
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
-import { Settings, RefreshCcw } from "lucide-react"
+import { RefreshCcw } from "lucide-react"
 import { StatusCard } from '@/components/StatusCard'
 import { GroupMappings } from '@/components/GroupMappings'
 import { ConfigSettings } from '@/components/ConfigSettings'
