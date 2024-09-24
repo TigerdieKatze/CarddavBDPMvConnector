@@ -194,12 +194,6 @@ export default function Home() {
 
                 <ConfigSettings config={config!} onUpdate={(key, value) => updateConfig({ [key]: value })} />
               </CardContent>
-              <CardFooter className="bg-gray-50">
-                <Button onClick={() => updateConfig(config || {})} className="w-full">
-                  <Settings className="mr-2 h-4 w-4" aria-hidden="true" />
-                  Save Configuration
-                </Button>
-              </CardFooter>
             </Card>
           </motion.div>
         </div>
